@@ -1,0 +1,15 @@
+<!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd">
+<suite name="Smoke Suite">
+    <listeners>
+        <listener class-name="com.epam.rd.autotasks.listeners.TestListener"/>
+    </listeners>
+    <test name="Smoke Tests">
+        <classes>
+            <class name="com.epam.rd.autotasks.tests.MailboxTests">
+                <methods>
+                    <include name="testCreateDraft"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+</suite>
