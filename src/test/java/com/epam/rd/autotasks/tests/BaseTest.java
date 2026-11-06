@@ -1,7 +1,9 @@
 package com.epam.rd.autotasks.tests;
 
 import com.epam.rd.autotasks.driver.DriverManager;
+import com.epam.rd.autotasks.models.User;
 import com.epam.rd.autotasks.utils.ConfigProvider;
+import com.epam.rd.autotasks.utils.TestDataFactory;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.openqa.selenium.WebDriver;
@@ -10,9 +12,9 @@ import org.testng.annotations.BeforeClass;
 
 public class BaseTest {
     protected static final Logger logger = LogManager.getLogger(BaseTest.class);
-    protected String email;
-    protected String password;
-    protected String recipient;
+
+    protected final TestDataFactory testDataFactory = new TestDataFactory();
+    protected User testUser;
 
     public WebDriver getDriver() {
         return DriverManager.getDriver();
@@ -20,13 +22,7 @@ public class BaseTest {
 
     @BeforeClass
     public void setUp() {
-        email = ConfigProvider.getInstance().getRequiredProperty("mail.email");
-        password = ConfigProvider.getInstance().getRequiredProperty("mail.password");
-        recipient = ConfigProvider.getInstance().getProperty("test.recipient");
-
-        if (recipient == null || recipient.trim().isEmpty()) {
-            recipient = ConfigProvider.getInstance().getRequiredProperty("mail.recipient");
-        }
+        testUser = testDataFactory.createUser();
 
         String browser = System.getProperty("browser", "chrome").toLowerCase();
         String env = System.getProperty("env", "qa").toLowerCase();

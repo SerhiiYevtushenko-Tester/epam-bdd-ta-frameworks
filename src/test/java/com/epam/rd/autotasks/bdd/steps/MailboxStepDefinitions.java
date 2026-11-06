@@ -8,7 +8,7 @@ import com.epam.rd.autotasks.pages.DraftsPage;
 import com.epam.rd.autotasks.pages.InboxPage;
 import com.epam.rd.autotasks.pages.LoginPage;
 import com.epam.rd.autotasks.pages.SentPage;
-import com.epam.rd.autotasks.utils.ConfigProvider;
+import com.epam.rd.autotasks.utils.TestDataFactory;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.When;
 import io.cucumber.java.en.Then;
@@ -23,25 +23,30 @@ public class MailboxStepDefinitions {
     private SentPage sentPage;
     private ComposeEmailComponent composeMail;
 
+    private final TestDataFactory testDataFactory = new TestDataFactory();
+
     private User testUser;
     private EmailMessage testMessage;
 
     private String subject;
-    private String body;
-    private String recipient;
 
-    @Given("the mailbox test configuration is available")
-    public void mailboxTestConfigurationIsAvailable() {
-        ConfigProvider.getInstance().getRequiredProperty("base.url");
+    @Given("the user is logged in to the mailbox")
+    public void userIsLoggedInToMailbox() {
+        testUser = testDataFactory.createUser();
+        testMessage = testDataFactory.createEmailMessage();
+        subject = testMessage.getSubject();
+
+        loginPage = new LoginPage(DriverManager.getDriver());
+        inboxPage = loginPage.login(testUser);
+
+        Assert.assertTrue(
+                inboxPage.isLoginSuccessful(),
+                "Login failed."
+        );
     }
 
-    @When("^the user opens the mailbox login page in \"([^\"]*)\"$")
-    public void openMailboxLoginPage(String browser) {
-        String url = ConfigProvider.getInstance().getRequiredProperty("base.url");
-
-        DriverManager.initDriver(browser.toLowerCase());
-        DriverManager.getDriver().get(url);
-
+    @When("the user opens the mailbox login page")
+    public void openMailboxLoginPage() {
         loginPage = new LoginPage(DriverManager.getDriver());
     }
 
@@ -50,45 +55,6 @@ public class MailboxStepDefinitions {
         Assert.assertTrue(
                 loginPage.isLoginScreenDisplayed(),
                 "Login page is not displayed."
-        );
-    }
-
-    @Given("the user is logged in to the mailbox")
-    public void userIsLoggedInToMailbox() {
-        ConfigProvider config = ConfigProvider.getInstance();
-
-        String email = config.getRequiredProperty("mail.email");
-        String password = config.getRequiredProperty("mail.password");
-        String url = config.getRequiredProperty("base.url");
-
-        recipient = config.getProperty("test.recipient");
-        if (recipient == null || recipient.trim().isEmpty()) {
-            recipient = config.getRequiredProperty("mail.recipient");
-        }
-
-        subject = config.getRequiredProperty("test.email.subject")
-                + " " + System.currentTimeMillis();
-        body = config.getRequiredProperty("test.email.body");
-
-        testUser = new User(email, password);
-        testMessage = EmailMessage.builder()
-                .to(recipient)
-                .subject(subject)
-                .body(body)
-                .build();
-
-        String browser = System.getProperty("browser", "firefox")
-                .toLowerCase();
-
-        DriverManager.initDriver(browser);
-        DriverManager.getDriver().get(url);
-
-        loginPage = new LoginPage(DriverManager.getDriver());
-        inboxPage = loginPage.login(testUser);
-
-        Assert.assertTrue(
-                inboxPage.isLoginSuccessful(),
-                "Login failed."
         );
     }
 

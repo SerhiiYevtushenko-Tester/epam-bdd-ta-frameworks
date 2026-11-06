@@ -1,9 +1,7 @@
 package com.epam.rd.autotasks.tests;
 
 import com.epam.rd.autotasks.models.EmailMessage;
-import com.epam.rd.autotasks.models.User;
 import com.epam.rd.autotasks.pages.*;
-import com.epam.rd.autotasks.utils.ConfigProvider;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.testng.Assert;
@@ -17,23 +15,13 @@ public class MailboxTests extends BaseTest {
     private SentPage sentPage;
     private ComposeEmailComponent composeMail;
 
-    private User testUser;
     private EmailMessage testMessage;
-
-    private final String uniqueId = String.valueOf(System.currentTimeMillis());
-    private final String subject = ConfigProvider.getInstance().getRequiredProperty("test.email.subject") + " " + uniqueId;
-    private final String body = ConfigProvider.getInstance().getRequiredProperty("test.email.body");
 
     @Test(priority = 1)
     public void testCreateDraft() {
-        logger.info("Starting testCreateDraft with subject: {}", subject);
-        testUser = new User(email, password);
+        testMessage = testDataFactory.createEmailMessage();
 
-        testMessage = EmailMessage.builder()
-                .to(recipient)
-                .subject(subject)
-                .body(body)
-                .build();
+        logger.info("Starting testCreateDraft with subject: {}", testMessage.getSubject());
 
         LoginPage loginPage = new LoginPage(getDriver());
         inboxPage = loginPage.login(testUser);
@@ -45,13 +33,28 @@ public class MailboxTests extends BaseTest {
         composeMail.saveAsDraft();
 
         draftsPage = inboxPage.goToDrafts();
-        Assert.assertTrue(draftsPage.containsMail(subject), "Draft was not found in Drafts folder!");
+        Assert.assertTrue(
+                draftsPage.containsMail(testMessage.getSubject()),
+                "Draft was not found in Drafts folder!"
+        );
 
-        composeMail = draftsPage.openDraft(subject);
+        composeMail = draftsPage.openDraft(testMessage.getSubject());
 
-        Assert.assertEquals(composeMail.getRecipientsValue(), testMessage.getTo(), "Draft recipient does not match!");
-        Assert.assertEquals(composeMail.getSubjectValue(), testMessage.getSubject(), "Draft subject does not match!");
-        Assert.assertEquals(composeMail.getBodyValue(), testMessage.getBody(), "Draft body does not match!");
+        Assert.assertEquals(
+                composeMail.getRecipientsValue(),
+                testMessage.getTo(),
+                "Draft recipient does not match!"
+        );
+        Assert.assertEquals(
+                composeMail.getSubjectValue(),
+                testMessage.getSubject(),
+                "Draft subject does not match!"
+        );
+        Assert.assertEquals(
+                composeMail.getBodyValue(),
+                testMessage.getBody(),
+                "Draft body does not match!"
+        );
 
         composeMail.saveAsDraft();
         logger.info("testCreateDraft completed successfully");
@@ -59,27 +62,44 @@ public class MailboxTests extends BaseTest {
 
     @Test(priority = 2, dependsOnMethods = "testCreateDraft")
     public void testSendDraft() {
-        logger.info("Starting testSendDraft for subject: {}", subject);
-        draftsPage = inboxPage.goToDrafts();
-        composeMail = draftsPage.openDraft(subject);
+        logger.info("Starting testSendDraft for subject: {}", testMessage.getSubject());
 
-        Assert.assertEquals(composeMail.getSubjectValue(), testMessage.getSubject(), "Subject mismatch before sending!");
+        draftsPage = inboxPage.goToDrafts();
+        composeMail = draftsPage.openDraft(testMessage.getSubject());
+
+        Assert.assertEquals(
+                composeMail.getSubjectValue(),
+                testMessage.getSubject(),
+                "Subject mismatch before sending!"
+        );
 
         composeMail.sendEmail();
 
         draftsPage = inboxPage.goToDrafts();
-        Assert.assertFalse(draftsPage.containsMail(subject), "Mail is still present in Drafts after sending!");
+        Assert.assertFalse(
+                draftsPage.containsMail(testMessage.getSubject()),
+                "Mail is still present in Drafts after sending!"
+        );
+
         logger.info("testSendDraft completed successfully");
     }
 
     @Test(priority = 3, dependsOnMethods = "testSendDraft")
     public void testVerifySentAndLogout() {
         logger.info("Starting testVerifySentAndLogout");
+
         sentPage = inboxPage.goToSent();
-        Assert.assertTrue(sentPage.containsMail(subject), "Mail is not present in Sent folder!");
+        Assert.assertTrue(
+                sentPage.containsMail(testMessage.getSubject()),
+                "Mail is not present in Sent folder!"
+        );
 
         LoginPage loginPage = inboxPage.logout();
-        Assert.assertTrue(loginPage.isLoginScreenDisplayed(), "Logout was not successful, login form is not visible!");
+        Assert.assertTrue(
+                loginPage.isLoginScreenDisplayed(),
+                "Logout was not successful, login form is not visible!"
+        );
+
         logger.info("testVerifySentAndLogout completed successfully");
     }
 }

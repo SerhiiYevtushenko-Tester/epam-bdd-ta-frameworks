@@ -13,6 +13,7 @@ The framework architecture implements design patterns and separation of concerns
 - **Decorator:** Selenium's `EventFiringDecorator`, together with the custom `LoggingWebDriverListener`, provides automatic WebDriver interaction logging without requiring logging code in Page Objects.
 - **Builder:** Applied to the `EmailMessage` model to make test-message construction clear and flexible.
 - **Page Object Model (POM):** Page Objects and reusable components encapsulate UI interactions and keep test steps readable.
+- **Test Data Factory:** `TestDataFactory` centralizes the creation of test users and email messages, allowing both TestNG tests and Cucumber step definitions to reuse the same test-data preparation logic.
 - **Separation of Concerns:** Browser management, configuration, test data, page interactions, logging, and BDD step definitions are organized into dedicated components.
 
 ---
@@ -52,8 +53,9 @@ The framework architecture implements design patterns and separation of concerns
 - `src/main/java/.../utils/` — Configuration management through `ConfigProvider`.
 - `src/test/java/.../driver/` — `DriverManager`, `DriverFactory`, `WebDriverFactory`, browser-specific factories, and `LoggingWebDriverListener`.
 - `src/test/java/.../listeners/` — `TestListener` for test execution events and failure diagnostics.
-- `src/test/java/.../tests/` — Conventional TestNG UI tests.
-- `src/test/java/.../bdd/hooks/` — Cucumber scenario hooks and browser cleanup.
+- `src/test/java/.../tests/` — Conventional TestNG UI tests and `BaseTest`.
+- `src/test/java/.../utils/` — `TestDataFactory` for shared test-data creation.
+- `src/test/java/.../bdd/hooks/` — Cucumber scenario hooks for browser initialization, navigation, and cleanup.
 - `src/test/java/.../bdd/runner/` — Cucumber TestNG runner and report configuration.
 - `src/test/java/.../bdd/steps/` — Cucumber step definitions.
 - `src/test/resources/features/` — Gherkin feature files, including `mailbox.feature`.
@@ -134,13 +136,22 @@ The project includes a Cucumber BDD suite that describes mailbox behavior throug
 
 ### Covered Scenarios
 
-- Checking that mailbox test configuration is available.
 - Creating a draft email.
 - Verifying the draft recipient, subject, and body.
 - Sending the draft email.
 - Verifying that the email no longer appears in **Drafts** and is present in **Sent**.
 - Logging out of the mailbox.
 - Verifying the login page in supported browsers using a **Scenario Outline** with **Examples**.
+
+### Browser Selection
+
+Browser initialization and navigation to the configured `base.url` are handled centrally by the `@Before` hook in `CucumberHooks.java`. The `@After` hook closes the browser after each scenario.
+
+The browser is selected using the following priority:
+
+1. The `@browser_firefox` or `@browser_chrome` tag specified in the feature file.
+2. The `browser` system property (`-Dbrowser=...`) if no browser tag is present.
+3. Chrome as the default browser if neither is specified.
 
 ### Run the BDD Suite
 
@@ -156,9 +167,9 @@ mvn test "-DsuiteXmlFile=src/test/resources/cucumber-testng.xml" "-Dbrowser=chro
 mvn test "-DsuiteXmlFile=src/test/resources/cucumber-testng.xml" "-Dbrowser=firefox"
 ```
 
-The BDD suite is configured through `CucumberTestRunner.java` and `cucumber-testng.xml`. Step implementations are located in `MailboxStepDefinitions.java`, while `CucumberHooks.java` handles browser cleanup after each scenario.
+The BDD suite is configured through `CucumberTestRunner.java` and `cucumber-testng.xml`. Step implementations are located in `MailboxStepDefinitions.java`, while `CucumberHooks.java` manages browser initialization, navigation, and cleanup for each scenario.
 
-**Note:** The browser used by a Scenario Outline example is specified in the feature file. The authenticated mailbox workflow reads the `browser` system property, defaulting to Firefox if no property is provided.
+Test users and email messages are created through the shared `TestDataFactory`, which is also used by the conventional TestNG tests.
 
 ---
 
@@ -179,4 +190,5 @@ After execution, review the generated reports to identify passed scenarios, fail
 - Test stability depends on the current Ukr.net interface, network conditions, browser compatibility, and account security requirements.
 - Use a dedicated test account and a controlled recipient for scenarios that create or send emails.
 - Keep environment configuration and credentials separate.
-- Check browser selection in both the feature file and step definitions when changing the browser used by BDD tests.
+- Cucumber browser initialization and cleanup are centralized in `CucumberHooks.java`.
+- Browser-specific behavior for the login-page Scenario Outline is controlled by tags in the feature file.
