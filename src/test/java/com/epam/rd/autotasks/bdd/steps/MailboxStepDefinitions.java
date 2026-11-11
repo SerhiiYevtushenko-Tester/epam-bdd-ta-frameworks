@@ -1,3 +1,4 @@
+
 package com.epam.rd.autotasks.bdd.steps;
 
 import com.epam.rd.autotasks.driver.DriverManager;
@@ -12,7 +13,6 @@ import com.epam.rd.autotasks.utils.TestDataFactory;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.When;
 import io.cucumber.java.en.Then;
-import io.cucumber.java.en.And;
 import org.testng.Assert;
 
 public class MailboxStepDefinitions {
@@ -30,24 +30,23 @@ public class MailboxStepDefinitions {
 
     private String subject;
 
+    @Given("the user is on the mailbox login page")
+    public void userIsOnMailboxLoginPage() {
+        loginPage = new LoginPage(DriverManager.getDriver());
+    }
+
     @Given("the user is logged in to the mailbox")
     public void userIsLoggedInToMailbox() {
         testUser = testDataFactory.createUser();
         testMessage = testDataFactory.createEmailMessage();
         subject = testMessage.getSubject();
 
-        loginPage = new LoginPage(DriverManager.getDriver());
         inboxPage = loginPage.login(testUser);
 
         Assert.assertTrue(
                 inboxPage.isLoginSuccessful(),
                 "Login failed."
         );
-    }
-
-    @When("the user opens the mailbox login page")
-    public void openMailboxLoginPage() {
-        loginPage = new LoginPage(DriverManager.getDriver());
     }
 
     @Then("the login page should be displayed")
@@ -106,21 +105,23 @@ public class MailboxStepDefinitions {
         draftsPage = inboxPage.goToDrafts();
     }
 
-    @Then("the email should no longer exist in Drafts")
-    public void emailShouldNoLongerExistInDrafts() {
-        Assert.assertFalse(
-                draftsPage.containsMail(subject),
-                "Email is still present in Drafts after sending."
-        );
-    }
+    @Then("^the email should (not )?be present in (Drafts|Sent)$")
+    public void emailShouldBePresentInFolder(String negation, String folder) {
+        boolean shouldExist = negation == null;
+        boolean actualResult;
 
-    @And("the email should be present in Sent")
-    public void emailShouldBePresentInSent() {
-        sentPage = inboxPage.goToSent();
+        if ("Drafts".equals(folder)) {
+            draftsPage = inboxPage.goToDrafts();
+            actualResult = draftsPage.containsMail(subject);
+        } else {
+            sentPage = inboxPage.goToSent();
+            actualResult = sentPage.containsMail(subject);
+        }
 
-        Assert.assertTrue(
-                sentPage.containsMail(subject),
-                "Email is not present in Sent folder."
+        Assert.assertEquals(
+                actualResult,
+                shouldExist,
+                "Email presence in " + folder + " does not match expectation."
         );
     }
 
